@@ -1,0 +1,222 @@
+---
+title: "Exploring the BRFSS data - Project 1 by Ryan Harden"
+output: 
+  html_document: 
+    fig_height: 4
+    highlight: pygments
+    theme: spacelab
+---
+
+## Setup
+```{r}
+options(repos = "http://cran.rstudio.com")
+install.packages("dplyr")
+install.packages("ggplot2")
+install.packages("devtools")
+install.packages("corrgram")
+```
+
+### Load packages
+```{r load-packages, message = FALSE}
+library(ggplot2)
+library(dplyr)
+library(devtools) 
+```
+
+### Load data
+```{r load-data}
+load("brfss2013.RData")
+```
+
+* * *
+
+## Part 1: Data
+The Behaviorial Risk Factor Surveillance System (BRFSS) is a continuous telephone survey conducted by the Centers for Disease Control and Prevention (CDC). In particular, the BRFSS is overseen by the Population Health Surveillance Branch that falls under the Division of POpulation Health at the National Center for Chronic Disease Prevention and Health Promotion at the CDC. 
+
+The purpose of the BRFSS is to provide insight into the potential behaviorial risk factors of the "non-institutionalized population" that lives in the United States. Or, in other words, this data collected from 2013 excludes the following: penal, mental facilities, old folk homes.To elaborate, this means the survey is slightly more restricted than just limiting data to the civilian noninstiutional population because the age required to answer the survey increased from 16 to 18, for research purposes. 
+
+Started in 1984 with only 15 states, the survey has expanded to now include 50 states, Washington D.C., and three territories. Over 400,000 people are interviewed and the BRFSS is, largely, considered as one of the most expansive continuous surveys. 
+
+During the data collection phrase, telephone interviews are often scripted. This may make the interview sound unnatural, but ensures consistency between households. Specifically, for these interviews researchers tend to use computer-assisted telephone interviewing (CATI) software. This helps to reduce data entry errors and skips questions that are not relevant.
+
+Further, there are three types of errors that may be present in these surveys. To elaborate, the potential errors may be (1) measurement error, (2) response error, or (3) selection bias. Measurement error is the difference between an observed value and the true value. This systematic, observational error will either make some information more positive or more negative, but not typically both. Response error is an incorrect answer provided by a respondent. For example, when "brfss2013" asked people their weight, there is a potential that both types of error took place and the sample of the dataframe was actually lower than the true value. Lastly, selection bias applies to the brfss because only those who have a telephone/cellphone and speak English or Spanish are asked questions. This means that results are only generalizable to these particular subsets of the US population. 
+
+sSources: 
+1. https://www.doh.wa.gov/DataandStatisticalReports/DataSystems/BehavioralRiskFactorSurveillanceSystemBRFSS/BRFSSCollectingData
+2. https://www.cdc.gov/brfss/publications/data_qvr.htm
+3. https://d18ky98rnyall9.cloudfront.net/_e34476fda339107329fc316d1f98e042_brfss_codebook.html?Expires=1553644800&Signature=Vr9MjL0swtbZ1bJANJY4E0Jp6F1zBkrfW5a0kYAz1vjL-pA93ZUgGJ-5m3rOPCkZgW-u52yPcDzS4awK73~mvIsUKKCML5Xet2d1PX-Gane4Zy~xF5LPZx1uA-Z4X01FiQyajgtn7unXyy5o2de1hPH40E1SVHs8gFL1Wj4UfKk_&Key-Pair-Id=APKAJLTNE6QMUY6HBC5A##_drnkmo4
+
+* * *
+
+## Part 2: Research questions
+
+**Research quesion 1:**
+Q: In Mississippi, what is the relationship between children, minutes of total physical activity per week, and the number of activites limited due to asthma? 
+V: children, X_state, pa1min_, asactlim
+D: Currently, I live in Mississippi wanted to know if there is a relationship between children, physical activity, and activity limited due to asthma. My speculation would be that physical activity is negatively impacted by both of these variables.
+
+**Research quesion 2:**
+Q: What is the relationship between total minutes of excercise average drinking in a month in New York?
+V: exerhmm1, exerhmm2, avedrnk2, X_state
+D: In the United States, healthy athletic events, such as a 5k run, are often followed up by grabbing a beer. This common occurence sparked my curiosity. I wanted to know if those who exercised more are more likely to engage in binge drinking behavior. The choice of New York was two fold. Firstly, the state is immensely populated and could provide greater insight than more rural states, as urbanization rates continue to increase for most US citizens. Secondly, the state has a healthy mix of urbanites living in New York City and is immensely rural in the rest of New York state. 
+
+**Research quesion 3:**
+Q: What is the relationship between sleep, physical health, and mental health in California? Are these variables correlated? 
+V: sleptim1, menthlth, X_state, physhlth
+D: When individuals have a bad day, there issue is either related to physical or mental ailments. What is the relationship that sleep would have on these variables. My assumption would be that sleep impacts physical health much more than mental health. Either way, the relationships between the variables in California should help shed light on, perhaps, an immediate remedy.
+
+* * *
+
+## Part 3: Exploratory data analysis
+Perform exploratory data analysis (EDA) that addresses each of the three research questions you outlined above. Your EDA should contain numerical summaries and visualizations. Each R output and plot should be accompanied by a brief interpretation.
+
+**Research quesion 1:**
+Q: In Mississippi, what is the relationship between children, minutes of total physical activity per week, and the number of activites limited due to asthma? 
+V: children, X_state, pa1min_, asactlim
+
+Filter "X_state" variables for the string "Mississippi".
+```{r}
+FirstQData <- brfss2013 %>%
+  filter(X_state == "Mississippi")
+```
+
+Subset the FirstQData by only the variables we will be using in the project.  
+```{r}
+FirstQData <- subset(FirstQData, select = c(children, pa1min_, asactlim))
+```
+
+If someone answered "NA" due to not having any activies limited to asthma, we will replace the value with "0"
+```{r}
+d <- FirstQData$asactlim #only replaces the "NA" in the asactlim section with 0
+d[is.na(d)] <- 0
+FirstQData$asactlim <- d
+```
+
+Exlude "NA" responses if it pertains to total minutes of physical activity. We don't want our results to be confused with someone who doesn't remember and cannot replace a non-zero number with zero. 
+```{r}
+FirstQData <- na.exclude(FirstQData)
+```
+
+Statistics summary for FirstQData
+IQR for children is 1. Most people had between 0 and 1 children.
+IQR for pa1min_ is 360. most people worked out between 1 hour and 7 hours per week. The max is 100% of a week, which isn't correct (intuitively).
+IQR for asactlim is 0. Also of note, it looks like no one was affected since the max is also a 0.
+```{r}
+summary(FirstQData)
+IQR(FirstQData$children)
+IQR(FirstQData$pa1min_)
+IQR(FirstQData$asactlim)
+```
+
+```{r}
+library(corrgram)
+library(hexbin)
+require(hexbin)
+
+x <- FirstQData$children
+y <- FirstQData$pa1min_
+bin <- hexbin(x, y, xbins = 50)
+
+plot(bin, main = "Children v. Exercise per Week (minutes)")
+smoothScatter(FirstQData$children~FirstQData$pa1min_)
+
+FirstQData_without_asthma <- subset(FirstQData, select = c(children, pa1min_)) #need to remove the asthma var to do the corrgram
+corrgram(FirstQData_without_asthma, order = TRUE, lower.panel = panel.shade, upper.panel = panel.pie, text.panel = panel.txt)
+```
+
+Conclusion: In Mississippi, it appears that physical exercise and children are not impacted by the limitations of asthma. To elaborate, this is because we learned that, in Mississippi, the values were 0 for the entire dataframe when we replaced the NAs with 0. Further, when looking at our graphs it appears there is some correlation between physical exercise and children. We can deduce this from the Hexbin, the Smoothscatter, and the corrgram. 
+
+
+**Research quesion 2:**
+Q: What is the relationship between total minutes of excercise average drinking in a month in New York?
+V: exerhmm1, exerhmm2, avedrnk2, X_state
+
+Create a new variable "total_exercise" that is the sum of all types of reported exercise (exerhmm1 & exerhmm2)
+```{r}
+SecQData <- brfss2013 %>%
+  mutate(total_exercise = brfss2013$exerhmm1 + brfss2013$exerhmm2)
+```
+
+Filter the variable "X_state" to only match the string "New York". This helps to narrow down all the data. 
+```{r}
+SecQData <- SecQData %>%
+  filter(X_state == "New York")
+```
+
+Subset the data to only include the variables "total_exercise" and "avedrnk2". These are the two variables we want to look at. 
+```{r}
+SecQData <- subset(SecQData, select = c(total_exercise, avedrnk2))
+```
+
+Reduce the "NA" entries, but keep the data frame's structure.
+```{r}
+SecQData <- na.exclude(SecQData)
+```
+
+Summary of the SecQData with the following statistics: min, 1Q, Median, Mean, 3Q, Max. 
+IQR for total exercise is 170 mins, IQR for avdrnk2 is 1 drink.
+```{r}
+summary(SecQData)
+IQR(SecQData$total_exercise)
+IQR(SecQData$avedrnk2)
+```
+
+Used a hexbin and corrgram to determine the frequency between the two variables. 
+Threw in a smoothscatter, originally, as an alternative to the hexbin. 
+```{r}
+library(hexbin)
+library(corrgram)
+#call the libraries that will be needed later
+
+require(hexbin)
+#requires hexbin to create a hexbin
+
+x <- SecQData$total_exercise
+y <- SecQData$avedrnk2
+bin <- hexbin(x, y, xbins = 30)
+#assign x,y, and bin. 
+
+plot(bin, main = "Total Exercise v. Average Drinks/Mo.") #hexbin/graph1
+smoothScatter(SecQData$total_exercise ~ SecQData$avedrnk2) #regression plot/graph2 
+corrgram(SecQData, order = TRUE, lower.panel=panel.shade, upper.panel = panel.pie, text.panel=panel.txt) #corrgram/graph3
+```
+Conclusion: In New York, it appears that the minutes of total exercise some positive correlation to the number of drinks if we look at the corrgram. However, if we look at the Hexbin, it appears that there is a concentrated amount of people particularly closer to the XY origin. Therefore, further analysis looking into omitted variable bias or other explanatory variables that could affect the response variable is needed. 
+
+
+**Research quesion 3:**
+Q: What is the relationship between sleep, physical health, and mental health in California? Are these variables correlated? 
+V: sleptim1, menthlth, X_state, physhlth
+
+Filtering for California by setting the varaiable "X_state" equal to the text "California"
+```{r}
+ThirdQData <- brfss2013 %>%
+  filter(X_state == "California")
+```
+
+Subsetting the California entries to only include sleep time, poor days of mental health, and physical health
+```{r}
+ThirdQData <- subset(ThirdQData, select = c(sleptim1, menthlth, physhlth))
+```
+
+Exclude the "NA" entries instead of omitting or keeping to reduce errors. 
+```{r}
+ThirdQData <- na.exclude(ThirdQData)
+```
+
+Summary statistic of the Min, 1st Q, Median, Mean, 3rd Q, Max of each variable.
+IQR for sleep is 2 hours, mental health is 3 days, and physical health is 3 days. 
+```{r}
+summary(ThirdQData)
+IQR(ThirdQData$sleptim1)
+IQR(ThirdQData$menthlth)
+IQR(ThirdQData$physhlth)
+```
+
+Demonstrate the relationship with a correlation image. Blue indicates higher relationships between the two variables than red. 
+```{r}
+library(corrgram)
+corrgram(ThirdQData, order = TRUE, lower.panel=panel.shade, upper.panel = panel.pie, text.panel=panel.txt)
+```
+
+
+Conclusion: In California, it appears that sleep has a stronger relationship (positive correlation) to the number of days of reported poor mental health as opposed to physical health. A stronger relationship (positive correlation) exists between physical health and mental health than either physical or mental health to sleep. However, further analysis is required to determine whether other explanatory variables are at play.
